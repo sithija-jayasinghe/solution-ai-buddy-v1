@@ -38,7 +38,7 @@ program
   .argument('<command>', 'Command to run (node, npm, java, dotnet, etc.)')
   .argument('[args...]', 'Arguments to pass to the command')
   .option('--no-ai', 'Disable AI explanations (show errors only)')
-  .option('--model <model>', 'Ollama model to use', 'llama3.2')
+  .option('--model <model>', 'Ollama model to use', 'qwen2.5:0.5b')
   .option('--offline', 'Force offline mode (pattern matching only)')
   .action(async (command, args, options) => {
     await runCommand(command, args, options);

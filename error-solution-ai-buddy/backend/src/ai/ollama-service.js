@@ -68,12 +68,12 @@ export class AIService {
       
       // Check if the model we want is available
       const models = data.models || [];
-      const hasModel = models.some(m => m.name.includes(this.model.split(':')[0]));
+      const modelBaseName = this.model.split(':')[0];
+      const hasModel = models.some(m => m.name.startsWith(modelBaseName));
       
       if (!hasModel && models.length > 0) {
         // Use first available model as fallback
         this.model = models[0].name;
-        console.log(`Note: Using ${this.model} (${this.model} not found)`);
       }
 
       return true;
@@ -109,10 +109,24 @@ export class AIService {
       });
 
       if (!response.ok) {
-        throw new Error(`Ollama returned ${response.status}`);
+        const errorData = await response.text();
+        // Check for memory error
+        if (errorData.includes('memory')) {
+          throw new Error('Not enough RAM. Try: errbuddy --model qwen2.5:0.5b');
+        }
+        throw new Error(`Ollama returned ${response.status}: ${errorData}`);
       }
 
       const data = await response.json();
+      
+      // Check for error in response
+      if (data.error) {
+        if (data.error.includes('memory')) {
+          throw new Error('Not enough RAM. Try a smaller model: --model qwen2.5:0.5b');
+        }
+        throw new Error(data.error);
+      }
+      
       return this.parseResponse(data.response);
     } catch (error) {
       if (error.name === 'TimeoutError') {
