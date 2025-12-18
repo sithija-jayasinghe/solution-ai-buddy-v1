@@ -25,7 +25,7 @@ const program = new Command();
 // Configuration
 const CONFIG = {
   aiEnabled: true,
-  ollamaModel: 'llama3.2',  // Good balance of speed and quality
+  ollamaModel: 'qwen2.5:0.5b',  // Small model that works on low-RAM systems
   ollamaUrl: 'http://localhost:11434',
   showSpinner: true,
   maxErrorLength: 2000,  // Truncate very long errors
