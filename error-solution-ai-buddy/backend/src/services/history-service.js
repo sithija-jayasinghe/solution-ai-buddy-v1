@@ -1,11 +1,11 @@
 /**
  * Error History Service - Stores and retrieves past errors
  * 
- * WHY SQLite:
- * 1. No server needed - just a file
- * 2. Fast reads for local storage
- * 3. Easy to backup (copy the file)
- * 4. Works offline
+ * WHY JSON file instead of SQLite:
+ * 1. No native compilation needed (works on all systems without Visual Studio)
+ * 2. Simple to understand and debug
+ * 3. Good enough for local history
+ * 4. Can be upgraded to SQLite later if needed
  * 
  * This service allows:
  * - Saving errors and their explanations for later reference
@@ -13,166 +13,174 @@
  * - Learning which errors are most common
  */
 
-import Database from 'better-sqlite3';
 import { join } from 'path';
 import { homedir } from 'os';
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs';
 
 export class HistoryService {
-  constructor(dbPath = null) {
-    // Default location: ~/.errbuddy/history.db
-    if (!dbPath) {
+  constructor(filePath = null) {
+    // Default location: ~/.errbuddy/history.json
+    if (!filePath) {
       const errbuddyDir = join(homedir(), '.errbuddy');
       if (!existsSync(errbuddyDir)) {
         mkdirSync(errbuddyDir, { recursive: true });
       }
-      dbPath = join(errbuddyDir, 'history.db');
+      filePath = join(errbuddyDir, 'history.json');
     }
 
-    this.db = new Database(dbPath);
-    this.initialize();
+    this.filePath = filePath;
+    this.data = this.load();
   }
 
   /**
-   * Create database schema if not exists
+   * Load history from file
    */
-  initialize() {
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS error_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        language TEXT,
-        error_type TEXT,
-        error_message TEXT,
-        error_full TEXT,
-        file_path TEXT,
-        line_number INTEGER,
-        explanation_what TEXT,
-        explanation_why TEXT,
-        explanation_fix TEXT,
-        explanation_example TEXT,
-        command TEXT,
-        helpful INTEGER DEFAULT NULL
-      );
+  load() {
+    try {
+      if (existsSync(this.filePath)) {
+        const content = readFileSync(this.filePath, 'utf-8');
+        return JSON.parse(content);
+      }
+    } catch (err) {
+      // Silently fail and use default
+    }
+    
+    // Return default structure
+    return {
+      errors: [],
+      nextId: 1
+    };
+  }
 
-      CREATE INDEX IF NOT EXISTS idx_error_type ON error_history(error_type);
-      CREATE INDEX IF NOT EXISTS idx_language ON error_history(language);
-      CREATE INDEX IF NOT EXISTS idx_timestamp ON error_history(timestamp);
-    `);
+  /**
+   * Save history to file
+   */
+  save() {
+    try {
+      writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+    } catch (err) {
+      // Silently fail - history is not critical
+    }
   }
 
   /**
    * Save an error and its explanation
    */
   saveError(error, explanation, command = null) {
-    const stmt = this.db.prepare(`
-      INSERT INTO error_history (
-        language, error_type, error_message, error_full,
-        file_path, line_number, explanation_what, explanation_why,
-        explanation_fix, explanation_example, command
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    const entry = {
+      id: this.data.nextId++,
+      timestamp: new Date().toISOString(),
+      language: error.language || null,
+      errorType: error.errorType || null,
+      errorMessage: error.errorMessage || null,
+      errorFull: error.fullText || null,
+      filePath: error.file || null,
+      lineNumber: error.line || null,
+      explanationWhat: explanation?.what || null,
+      explanationWhy: explanation?.why || null,
+      explanationFix: explanation?.fix || null,
+      explanationExample: explanation?.example || null,
+      command: command,
+      helpful: null
+    };
 
-    const result = stmt.run(
-      error.language || null,
-      error.errorType || null,
-      error.errorMessage || null,
-      error.fullText || null,
-      error.file || null,
-      error.line || null,
-      explanation?.what || null,
-      explanation?.why || null,
-      explanation?.fix || null,
-      explanation?.example || null,
-      command
-    );
-
-    return result.lastInsertRowid;
+    this.data.errors.push(entry);
+    
+    // Keep only last 500 errors to prevent file from growing too large
+    if (this.data.errors.length > 500) {
+      this.data.errors = this.data.errors.slice(-500);
+    }
+    
+    this.save();
+    return entry.id;
   }
 
   /**
    * Mark an explanation as helpful or not
    */
   markHelpful(id, helpful) {
-    const stmt = this.db.prepare(`
-      UPDATE error_history SET helpful = ? WHERE id = ?
-    `);
-    stmt.run(helpful ? 1 : 0, id);
+    const entry = this.data.errors.find(e => e.id === id);
+    if (entry) {
+      entry.helpful = helpful;
+      this.save();
+    }
   }
 
   /**
    * Get recent errors
    */
   getRecent(limit = 10) {
-    const stmt = this.db.prepare(`
-      SELECT * FROM error_history
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `);
-    return stmt.all(limit);
+    return this.data.errors
+      .slice(-limit)
+      .reverse();
   }
 
   /**
    * Search errors by type or message
    */
   search(query, limit = 20) {
-    const stmt = this.db.prepare(`
-      SELECT * FROM error_history
-      WHERE error_type LIKE ? OR error_message LIKE ?
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `);
-    const searchTerm = `%${query}%`;
-    return stmt.all(searchTerm, searchTerm, limit);
+    const lowerQuery = query.toLowerCase();
+    return this.data.errors
+      .filter(e => 
+        (e.errorType && e.errorType.toLowerCase().includes(lowerQuery)) ||
+        (e.errorMessage && e.errorMessage.toLowerCase().includes(lowerQuery))
+      )
+      .slice(-limit)
+      .reverse();
   }
 
   /**
    * Find similar errors (useful for "have I seen this before?")
    */
   findSimilar(errorType, language) {
-    const stmt = this.db.prepare(`
-      SELECT * FROM error_history
-      WHERE error_type = ? AND language = ?
-      ORDER BY timestamp DESC
-      LIMIT 5
-    `);
-    return stmt.all(errorType, language);
+    return this.data.errors
+      .filter(e => e.errorType === errorType && e.language === language)
+      .slice(-5)
+      .reverse();
   }
 
   /**
    * Get error statistics
    */
   getStats() {
-    const total = this.db.prepare('SELECT COUNT(*) as count FROM error_history').get();
+    const errors = this.data.errors;
     
-    const byLanguage = this.db.prepare(`
-      SELECT language, COUNT(*) as count
-      FROM error_history
-      GROUP BY language
-      ORDER BY count DESC
-    `).all();
+    // Count by language
+    const byLanguage = {};
+    errors.forEach(e => {
+      if (e.language) {
+        byLanguage[e.language] = (byLanguage[e.language] || 0) + 1;
+      }
+    });
 
-    const byType = this.db.prepare(`
-      SELECT error_type, COUNT(*) as count
-      FROM error_history
-      GROUP BY error_type
-      ORDER BY count DESC
-      LIMIT 10
-    `).all();
+    // Count by error type
+    const byType = {};
+    errors.forEach(e => {
+      if (e.errorType) {
+        byType[e.errorType] = (byType[e.errorType] || 0) + 1;
+      }
+    });
 
-    const helpfulStats = this.db.prepare(`
-      SELECT 
-        SUM(CASE WHEN helpful = 1 THEN 1 ELSE 0 END) as helpful,
-        SUM(CASE WHEN helpful = 0 THEN 1 ELSE 0 END) as not_helpful,
-        SUM(CASE WHEN helpful IS NULL THEN 1 ELSE 0 END) as no_feedback
-      FROM error_history
-    `).get();
+    // Sort and format
+    const sortedByLanguage = Object.entries(byLanguage)
+      .map(([language, count]) => ({ language, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const sortedByType = Object.entries(byType)
+      .map(([errorType, count]) => ({ errorType, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Helpful stats
+    const helpful = errors.filter(e => e.helpful === true).length;
+    const notHelpful = errors.filter(e => e.helpful === false).length;
+    const noFeedback = errors.filter(e => e.helpful === null).length;
 
     return {
-      total: total.count,
-      byLanguage,
-      topErrors: byType,
-      feedback: helpfulStats
+      total: errors.length,
+      byLanguage: sortedByLanguage,
+      topErrors: sortedByType,
+      feedback: { helpful, notHelpful, noFeedback }
     };
   }
 
@@ -180,13 +188,7 @@ export class HistoryService {
    * Clear all history
    */
   clearHistory() {
-    this.db.exec('DELETE FROM error_history');
-  }
-
-  /**
-   * Close database connection
-   */
-  close() {
-    this.db.close();
+    this.data = { errors: [], nextId: 1 };
+    this.save();
   }
 }

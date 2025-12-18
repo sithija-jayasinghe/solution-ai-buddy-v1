@@ -72,7 +72,7 @@ const ERROR_PATTERNS = {
 const COMMON_ERRORS = {
   javascript: {
     'TypeError': {
-      'Cannot read property': {
+      'Cannot read propert': {
         what: 'You tried to access a property on something that is undefined or null.',
         why: 'The variable you\'re accessing doesn\'t exist or hasn\'t been assigned a value yet.',
         fix: 'Add a null check before accessing properties.',
