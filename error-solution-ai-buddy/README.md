@@ -47,7 +47,24 @@ TypeError: Cannot read properties of undefined (reading 'map')
 
 ## Quick Start
 
-### 1. Install Ollama (AI Engine)
+### One-Command Setup (Recommended)
+
+```bash
+# Windows PowerShell (run as Administrator)
+.\setup.ps1
+
+# macOS/Linux
+chmod +x setup.sh && ./setup.sh
+```
+
+This will:
+1. ✅ Install dependencies
+2. ✅ Make `errbuddy` available globally
+3. ✅ Download AI model (if Ollama installed)
+
+### Manual Setup
+
+#### Step 1: Install Ollama (Optional - for AI features)
 
 ```bash
 # Windows: Download from https://ollama.ai
