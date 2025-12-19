@@ -1,0 +1,1 @@
+{"version":3,"file":"error-buddy-terminal.d.ts","sourceRoot":"","sources":["../src/error-buddy-terminal.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAEH,OAAO,KAAK,MAAM,MAAM,QAAQ,CAAC;AAEjC,qBAAa,kBAAkB;IAC3B,OAAO,CAAC,QAAQ,CAA8B;IAE9C;;OAEG;IACH,MAAM,IAAI,MAAM,CAAC,QAAQ;IAUzB;;OAEG;IACH,UAAU,CAAC,OAAO,EAAE,MAAM,GAAG,IAAI;IASjC;;OAEG;IACH,OAAO,IAAI,IAAI;CAMlB"}

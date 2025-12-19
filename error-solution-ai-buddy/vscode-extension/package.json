@@ -1,0 +1,146 @@
+{
+  "name": "error-buddy",
+  "displayName": "Error Buddy - AI Error Explanations",
+  "description": "Get instant AI-powered explanations for errors directly in VS Code terminal",
+  "version": "1.0.0",
+  "publisher": "error-buddy",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages",
+    "Debuggers"
+  ],
+  "keywords": [
+    "error",
+    "debugging",
+    "ai",
+    "explanation",
+    "terminal",
+    "javascript",
+    "java",
+    "csharp"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "icon": "images/icon.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "errorBuddy.explainError",
+        "title": "Error Buddy: Explain Selected Error"
+      },
+      {
+        "command": "errorBuddy.explainLastError",
+        "title": "Error Buddy: Explain Last Terminal Error"
+      },
+      {
+        "command": "errorBuddy.toggleAutoExplain",
+        "title": "Error Buddy: Toggle Auto-Explain"
+      },
+      {
+        "command": "errorBuddy.openErrorBuddyTerminal",
+        "title": "Error Buddy: Open Error Buddy Terminal"
+      },
+      {
+        "command": "errorBuddy.showHistory",
+        "title": "Error Buddy: Show Error History"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "errorBuddy.explainError",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "terminalFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Error Buddy",
+      "properties": {
+        "errorBuddy.autoExplain": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically explain errors when detected in terminal"
+        },
+        "errorBuddy.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "URL of the Ollama server"
+        },
+        "errorBuddy.model": {
+          "type": "string",
+          "default": "qwen2.5:0.5b",
+          "description": "Ollama model to use for explanations"
+        },
+        "errorBuddy.showInPanel": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show explanations in a dedicated panel"
+        },
+        "errorBuddy.showNotification": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show notification when error is detected"
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "errorBuddy.explainError",
+          "when": "editorHasSelection",
+          "group": "errorBuddy"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "errorBuddy.explainError",
+          "group": "errorBuddy"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "errorBuddyPanel",
+          "title": "Error Buddy",
+          "icon": "$(bug)"
+        }
+      ]
+    },
+    "views": {
+      "errorBuddyPanel": [
+        {
+          "id": "errorBuddyExplanation",
+          "name": "Explanation",
+          "type": "webview"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "license": "MIT"
+}
