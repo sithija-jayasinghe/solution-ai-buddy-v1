@@ -55,13 +55,54 @@ TypeError: Cannot read properties of undefined (reading 'map')
 
 # macOS/Linux
 chmod +x setup.sh && ./setup.sh
-```
-
 This will:
 1. ✅ Install dependencies
 2. ✅ Make `errbuddy` available globally
-3. ✅ Download AI model (if Ollama installed)
+## Installation & Usage
 
+### 1. Download the Project
+- Clone the repository:
+  ```sh
+  git clone <your-repo-url>
+  ```
+
+### 2. Install Dependencies
+- In the project folder, run:
+  ```sh
+  npm install
+  ```
+
+### 3. Use the CLI Tool
+- Go to the CLI directory:
+  ```sh
+  cd error-solution-ai-buddy/cli
+  npm link
+  ```
+- Now you can run the CLI from anywhere:
+  ```sh
+  errbuddy <your-command>
+  # Example:
+  errbuddy node test-error.js
+  ```
+
+### 4. Use the VS Code Extension
+- Build the extension (if needed):
+  ```sh
+  cd error-solution-ai-buddy/extension
+  npm install
+  npm run build
+  ```
+- Install the extension in VS Code:
+  - Use "Install from VSIX..." if you have a packaged file.
+  - Or run:
+    ```sh
+    code --install-extension <path-to-extension-folder>
+    ```
+- Reload VS Code.
+
+### 5. Start Using
+- For CLI: Run commands with `errbuddy` prefix.
+- For extension: Use terminal and Error Buddy commands in VS Code.
 ### Manual Setup
 
 #### Step 1: Install Ollama (Optional - for AI features)
@@ -82,7 +123,6 @@ curl -fsSL https://ollama.ai/install.sh | sh
 ollama serve   # Start the server (keep this running)
 ollama pull llama3.2   # Download the model (~2GB)
 ```
-
 ### 3. Install Error Buddy
 
 ```bash
