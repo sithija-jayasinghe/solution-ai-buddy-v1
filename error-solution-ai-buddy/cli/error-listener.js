@@ -344,6 +344,7 @@ export class ErrorListener {
   detectLanguage(errorText) {
     // JavaScript/Node.js indicators
     if (
+      /(TypeError|ReferenceError|SyntaxError)[:\s]/i.test(errorText) ||
       /at\s+\S+\s+\(.*\.js:\d+:\d+\)/.test(errorText) ||
       /at\s+.*\.js:\d+:\d+/.test(errorText) ||
       /node_modules/.test(errorText) ||

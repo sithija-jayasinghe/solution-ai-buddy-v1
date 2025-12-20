@@ -18,6 +18,7 @@ import { spawn } from 'child_process';
 import { ErrorListener } from './error-listener.js';
 import { Formatter } from './formatter.js';
 import { AIService } from '../backend/src/ai/ollama-service.js';
+import { HistoryService } from '../backend/src/services/history-service.js';
 import chalk from 'chalk';
 
 const program = new Command();
@@ -85,6 +86,7 @@ async function runCommand(command, args, options) {
   const formatter = new Formatter();
   const errorListener = new ErrorListener();
   const aiService = new AIService(CONFIG.ollamaUrl, options.model || CONFIG.ollamaModel);
+  const history = new HistoryService();
 
   // Check if Ollama is available (non-blocking)
   let ollamaAvailable = false;
@@ -142,10 +144,12 @@ async function runCommand(command, args, options) {
         
         // Try AI explanation if available
         if (ollamaAvailable && options.ai !== false) {
-          await explainWithAI(stderrBuffer, analysis, aiService, formatter);
+          const explanation = await explainWithAI(stderrBuffer, analysis, aiService, formatter);
+          try { history.saveError({ ...analysis, fullText: stderrBuffer }, explanation, `${command} ${args.join(' ')}`); } catch {}
         } else {
           // Fall back to pattern-based explanation
           formatter.printPatternExplanation(analysis);
+          try { history.saveError({ ...analysis, fullText: stderrBuffer }, analysis.localExplanation, `${command} ${args.join(' ')}`); } catch {}
         }
       }
     }
@@ -185,10 +189,12 @@ async function explainWithAI(errorText, analysis, aiService, formatter) {
     spinner.stop();
     
     formatter.printAIExplanation(explanation);
+    return explanation;
   } catch (err) {
     spinner.stop();
     console.log(chalk.yellow('⚠️  AI explanation failed. Showing pattern-based help:'));
     formatter.printPatternExplanation(analysis);
+    return analysis.localExplanation;
   }
 }
 

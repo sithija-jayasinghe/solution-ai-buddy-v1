@@ -52,6 +52,7 @@ let explanationPanel;
 let statusBarItem;
 let autoExplainEnabled = true;
 let lastError = null;
+let errorHistory = [];
 function activate(context) {
     console.log('Error Buddy extension is now active!');
     // Initialize services
@@ -111,6 +112,11 @@ async function handleTerminalExecution(event) {
     if (analysis.isError) {
         lastError = output;
         updateStatusBar('error');
+        // Track history (keep last 20 entries)
+        errorHistory.unshift({ text: output, analysis, timestamp: Date.now() });
+        if (errorHistory.length > 20) {
+            errorHistory.pop();
+        }
         const config = vscode.workspace.getConfiguration('errorBuddy');
         // Show notification if enabled
         if (config.get('showNotification', false)) {
@@ -230,8 +236,42 @@ function openErrorBuddyTerminal() {
  * Show error history panel
  */
 async function showHistory() {
-    // For now, show a simple message. Could be expanded to full history.
-    vscode.window.showInformationMessage('Error history feature coming soon!');
+    if (errorHistory.length === 0) {
+        vscode.window.showInformationMessage('No errors recorded yet.');
+        return;
+    }
+    const items = errorHistory.map((h, idx) => ({
+        label: `${h.analysis.errorType || 'Unknown'} — ${formatTimestamp(h.timestamp)}`,
+        description: h.analysis.language ? `Language: ${h.analysis.language}` : undefined,
+        detail: truncate(h.text, 120),
+        index: idx
+    }));
+    const choice = await vscode.window.showQuickPick(items, {
+        title: 'Error Buddy History',
+        matchOnDetail: true,
+        placeHolder: 'Select an error to view or explain'
+    });
+    if (!choice)
+        return;
+    const selected = errorHistory[choice.index];
+    const action = await vscode.window.showInformationMessage(`Selected: ${selected.analysis.errorType || 'Unknown error'}`, 'Explain', 'Copy Text', 'Remove');
+    if (action === 'Explain') {
+        await explainError(selected.text, selected.analysis);
+    }
+    else if (action === 'Copy Text') {
+        await vscode.env.clipboard.writeText(selected.text);
+        vscode.window.showInformationMessage('Error text copied to clipboard.');
+    }
+    else if (action === 'Remove') {
+        errorHistory.splice(choice.index, 1);
+    }
+}
+function truncate(text, max) {
+    return text.length > max ? text.slice(0, max) + '…' : text;
+}
+function formatTimestamp(ts) {
+    const d = new Date(ts);
+    return d.toLocaleString();
 }
 /**
  * Update status bar appearance

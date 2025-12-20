@@ -148,7 +148,8 @@ class ErrorDetector {
      */
     detectLanguage(errorText) {
         // JavaScript/Node.js indicators
-        if (/at\s+\S+\s+\(.*\.js:\d+:\d+\)/.test(errorText) ||
+        if (/(TypeError|ReferenceError|SyntaxError)[:\s]/i.test(errorText) ||
+            /at\s+\S+\s+\(.*\.js:\d+:\d+\)/.test(errorText) ||
             /at\s+.*\.js:\d+:\d+/.test(errorText) ||
             /node_modules/.test(errorText) ||
             /ENOENT|EACCES|ECONNREFUSED/.test(errorText) ||
