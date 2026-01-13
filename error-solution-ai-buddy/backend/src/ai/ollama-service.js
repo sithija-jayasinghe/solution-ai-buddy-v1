@@ -32,13 +32,13 @@ RULES (VERY IMPORTANT):
 
 2. Use simple language a junior developer can understand
 3. Be concise - no long paragraphs
-4. If you're not 100% sure, say "This might be because..."
-5. Focus on the most likely cause first
+4. Do NOT assume frameworks (like Spring, React) unless the error explicitly mentions them
+5. Focus on the most likely cause first (typos, missing variables, syntax)
 6. Never make up information - if unsure, say so
 
 LANGUAGE-SPECIFIC TIPS:
 - JavaScript: Common issues are undefined/null, async/await, imports
-- Java: Common issues are NullPointer, classpath, types
+- Java: Common issues are NullPointer, missing variables, types (Avoid suggesting @Autowired unless it's a Spring error)
 - C#: Common issues are null reference, missing using, async
 
 Remember: Developers are frustrated when they see errors. Be helpful and direct.`;
@@ -106,7 +106,7 @@ export class AIService {
           system: SYSTEM_PROMPT,
           stream: false,
           options: {
-            temperature: 0.3,  // Lower = more focused/consistent
+            temperature: 0.1,  // Very low to prevent hallucinations
             top_p: 0.9,
             num_predict: 500, // Limit response length
           }
