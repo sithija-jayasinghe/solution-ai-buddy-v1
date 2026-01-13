@@ -55,10 +55,13 @@ export class AIService {
    */
   async checkConnection() {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
       const response = await fetch(`${this.baseUrl}/api/tags`, {
         method: 'GET',
-        signal: AbortSignal.timeout(3000), // 3 second timeout for health check
-      });
+        signal: controller.signal, // 3 second timeout for health check
+      }).finally(() => clearTimeout(timeoutId));
       
       if (!response.ok) {
         return false;
@@ -88,6 +91,9 @@ export class AIService {
   async explainError(errorText, language = 'unknown') {
     const prompt = this.buildPrompt(errorText, language);
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
     try {
       const response = await fetch(`${this.baseUrl}/api/generate`, {
         method: 'POST',
@@ -105,8 +111,8 @@ export class AIService {
             num_predict: 500, // Limit response length
           }
         }),
-        signal: AbortSignal.timeout(this.timeout),
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
         const errorData = await response.text();
@@ -129,7 +135,7 @@ export class AIService {
       
       return this.parseResponse(data.response);
     } catch (error) {
-      if (error.name === 'TimeoutError') {
+      if (error.name === 'TimeoutError' || error.name === 'AbortError') {
         throw new Error('AI explanation timed out. Try a smaller model.');
       }
       throw error;
