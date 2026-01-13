@@ -76,6 +76,34 @@ program
   });
 
 /**
+ * Sanitize error text before sending to AI
+ * 
+ * WHY: Privacy protection - we don't want to leak:
+ * - File paths (might contain project names, usernames)
+ * - Environment variables
+ * - API keys that might appear in errors
+ */
+function sanitizeError(errorText) {
+  let sanitized = errorText;
+  
+  // Remove Windows-style absolute paths (C:\Users\...)
+  sanitized = sanitized.replace(/[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*/g, '[path]\\');
+  
+  // Remove Unix-style absolute paths (/home/user/...)
+  sanitized = sanitized.replace(/\/(?:home|Users|var|usr|opt)\/[^\s:]+/g, '[path]');
+  
+  // Remove common secret patterns
+  sanitized = sanitized.replace(/(?:api[_-]?key|secret|password|token)\s*[:=]\s*['"]?[^'"\s]+['"]?/gi, '[REDACTED]');
+  
+  // Truncate if too long
+  if (sanitized.length > CONFIG.maxErrorLength) {
+    sanitized = sanitized.substring(0, CONFIG.maxErrorLength) + '\n... (truncated)';
+  }
+  
+  return sanitized;
+}
+
+/**
  * Main function that runs the wrapped command
  * 
  * WHY we use spawn() instead of exec():
@@ -196,34 +224,6 @@ async function explainWithAI(errorText, analysis, aiService, formatter) {
     formatter.printPatternExplanation(analysis);
     return analysis.localExplanation;
   }
-}
-
-/**
- * Sanitize error text before sending to AI
- * 
- * WHY: Privacy protection - we don't want to leak:
- * - File paths (might contain project names, usernames)
- * - Environment variables
- * - API keys that might appear in errors
- */
-function sanitizeError(errorText) {
-  let sanitized = errorText;
-  
-  // Remove Windows-style absolute paths (C:\Users\...)
-  sanitized = sanitized.replace(/[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*/g, '[path]\\');
-  
-  // Remove Unix-style absolute paths (/home/user/...)
-  sanitized = sanitized.replace(/\/(?:home|Users|var|usr|opt)\/[^\s:]+/g, '[path]');
-  
-  // Remove common secret patterns
-  sanitized = sanitized.replace(/(?:api[_-]?key|secret|password|token)\s*[:=]\s*['"]?[^'"\s]+['"]?/gi, '[REDACTED]');
-  
-  // Truncate if too long
-  if (sanitized.length > CONFIG.maxErrorLength) {
-    sanitized = sanitized.substring(0, CONFIG.maxErrorLength) + '\n... (truncated)';
-  }
-  
-  return sanitized;
 }
 
 // Run the CLI
