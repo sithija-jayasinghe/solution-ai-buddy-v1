@@ -73,7 +73,7 @@ export class HistoryService {
       language: error.language || null,
       errorType: error.errorType || null,
       errorMessage: error.errorMessage || null,
-      errorFull: error.fullText || null,
+      errorFull: (error.fullText && error.fullText.length > 2000) ? error.fullText.substring(0, 2000) + '... (truncated)' : (error.fullText || null),
       filePath: error.file || null,
       lineNumber: error.line || null,
       explanationWhat: explanation?.what || null,
