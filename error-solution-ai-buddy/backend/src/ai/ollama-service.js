@@ -121,21 +121,25 @@ export class AIService {
       }).finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
-        const errorData = await response.text();
+        let errorMsg = '';
+        try {
+          const errorJson = await response.json();
+          errorMsg = errorJson.error || JSON.stringify(errorJson);
+        } catch {
+          errorMsg = await response.text();
+        }
+
         // Check for memory error
-        if (errorData.includes('memory')) {
+        if (errorMsg.includes('memory')) {
           throw new Error('Not enough RAM. Try: errbuddy --model qwen2.5:0.5b');
         }
-        throw new Error(`Ollama returned ${response.status}: ${errorData}`);
+        throw new Error(`Ollama returned ${response.status}: ${errorMsg}`);
       }
 
       const data = await response.json();
       
       // Check for error in response
       if (data.error) {
-        if (data.error.includes('memory')) {
-          throw new Error('Not enough RAM. Try a smaller model: --model qwen2.5:0.5b');
-        }
         throw new Error(data.error);
       }
       
